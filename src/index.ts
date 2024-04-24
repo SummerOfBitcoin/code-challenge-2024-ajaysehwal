@@ -22,17 +22,23 @@ export class MineBlock {
   get duration(): number {
     return this.ended - this.started;
   }
-
+   reverseBytes(hexString: string): string {
+    if (hexString.length % 2 !== 0) {
+        throw new Error("Hexadecimal string length must be even.");
+    }
+    const reversedHexString = hexString.match(/.{2}/g)?.reverse()?.join("") || "";
+    return reversedHexString;
+}
   async start() {
     const header = this.block.headerBuffer();
     this.block.hash = doubleSHA256(header).toString("hex");
     while (
-      BigInt('0x'+this.block.hash) > this.block.difficulty &&
+      BigInt('0x'+this.reverseBytes(this.block.hash)) > this.block.difficulty &&
       this.block.nonce < this.MAX_NONCE
     ) {
       this.block.nonce++;
       header.writeUInt32LE(this.block.nonce, 80 - 4);
-      this.block.hash = doubleSHA256(header).toString("hex");
+      this.block.hash = doubleSHA256(header).toString("hex")
       this.hashes++;
       // console.log(this.block.nonce, this.block.hash);
     }
@@ -52,7 +58,6 @@ export class Miner {
       validtransaction,
       BigInt(0x1f00ffff)
     );
-    console.log(block.headerBuffer().toString("hex"));
     const { serializeCoinbase } = block.addCoinbaseTransaction(coinbase);
     const mineBlock = new MineBlock(chain, block, "");
     console.log(
@@ -62,11 +67,18 @@ export class Miner {
     await mineBlock.start();
     chain.addBlock(block);
     const txids = block.transactions.map((tx) => tx.txid);
+      const reversedTxids = txids.map((txid) =>
+      txid.match(/.{2}/g)?.reverse()?.join("") || ""
+    );
+    const wtxids=block.transactions.map((tx) => tx.wtxid);
+    const reversedwTxids = wtxids.map((wtxid) =>
+    wtxid.match(/.{2}/g)?.reverse()?.join("") || ""
+  );
     const output = `${block
       .headerBuffer()
-      .toString("hex")}\n${serializeCoinbase}\n${txids.join("\n")}`;
+      .toString("hex")}\n${serializeCoinbase}\n${reversedTxids.join("\n")}`;
     fs.writeFileSync("output.txt", output);
-    // fs.writeFileSync('test.ts',`export const txids = ${JSON.stringify(txids)};`)
+    fs.writeFileSync('test.txt',reversedwTxids.join('\n'))
     console.log(chain);
   }
 

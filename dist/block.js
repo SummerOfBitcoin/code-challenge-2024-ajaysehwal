@@ -22,6 +22,8 @@ class Block {
         this.transactions = transaction;
         this.totalfees = this.calculateblockFees(transaction);
         this.merkleRoot = this.getmerkleRoot(transaction);
+        this.witnessMerkleRoot = this.calculatewTxidRoot(transaction);
+        this.calculateBlockWeight();
     }
     get difficulty() {
         return ((this.bits & BigInt(0x00ffffff)) * BigInt(2) ** (BigInt(8) * ((this.bits >> BigInt(24)) - BigInt(3))));
@@ -58,30 +60,46 @@ class Block {
     addTransaction(transaction) {
         this.transactions.push(transaction);
         this.txCount = this.transactions.length;
-        this.updateMerkleRoot(this.transactions);
+        this.merkleRoot = this.getmerkleRoot(this.transactions);
         return this.txCount;
     }
-    calculateWeight() { }
     addCoinbaseTransaction(tx) {
         tx.vout[0].value += this.totalfees;
-        tx.vout[1].scriptpubkey = `6a24aa21a9ed${this.getwtxidCommitment().toString("hex")}`;
+        const startstring = "6a24aa21a9ed";
+        const commitment = this.getwtxidCommitment();
+        const scriptPubKey = Buffer.from(startstring + commitment, 'hex');
+        tx.vout[1].scriptpubkey = scriptPubKey.toString('hex');
+        console.log("coinbase", tx.getTx());
         console.log("Coinbase", tx.getTxId());
         this.transactions.unshift(tx.getTx());
-        this.updateMerkleRoot(this.transactions);
+        this.merkleRoot = this.getmerkleRoot(this.transactions);
         this.txCount++;
         return { serializeCoinbase: tx.serializeWithWitness() };
     }
     getwtxidCommitment() {
-        console.log((0, utils_1.doubleSHA256)(Buffer.from(this.calculatewTxidRoot(this.transactions) + "0".repeat(64), "hex")));
-        return (0, utils_1.doubleSHA256)(Buffer.from(this.calculatewTxidRoot(this.transactions) + "0".repeat(64), "hex"));
+        const wxidRoot = Buffer.from(this.witnessMerkleRoot, 'hex').reverse();
+        console.log("Find--------", wxidRoot.toString('hex'));
+        const witnessNullVector = Buffer.alloc(32).reverse();
+        const commitment = (0, utils_1.doubleSHA256)(Buffer.concat([wxidRoot, witnessNullVector]));
+        return commitment.toString('hex');
+    }
+    reverseByteOrder(hexString) {
+        const hexBytes = Buffer.from(hexString, 'hex');
+        const reversedBytes = Buffer.from(hexBytes.reverse());
+        const reversedHexString = reversedBytes.toString('hex');
+        return reversedHexString;
     }
     calculatewTxidRoot(transactions) {
         const wtxids = transactions.map((el) => el.wtxid);
         wtxids.unshift("0".repeat(64)); /// for coinbase
         return (0, merkleRoot_1.calualateMerkleRoot)(wtxids);
     }
-    updateMerkleRoot(transaction) {
-        this.merkleRoot = this.getmerkleRoot(transaction);
+    calculateBlockWeight() {
+        let txweight = 0;
+        for (let tx of this.transactions) {
+            txweight += tx.weight;
+        }
+        console.log("-------------------weight of block", 320 + txweight);
     }
     getmerkleRoot(transactions) {
         if (transactions.length === 0) {

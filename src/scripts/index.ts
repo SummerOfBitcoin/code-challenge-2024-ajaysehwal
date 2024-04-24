@@ -12,12 +12,12 @@ export class BitcoinScript {
       let isValidInput = false;
 
       switch (scripttype) {
-        case "p2pkh":
-          scriptPubKey = input.prevout.scriptpubkey_asm;
-          scriptSig = input.scriptsig_asm;
-          const p2pkh = new P2PKH(this.transaction);
-          isValidInput = p2pkh.execute(scriptPubKey, scriptSig, i);
-          break;
+        // case "p2pkh":
+        //   scriptPubKey = input.prevout.scriptpubkey_asm;
+        //   scriptSig = input.scriptsig_asm;
+        //   const p2pkh = new P2PKH(this.transaction);
+        //   isValidInput = p2pkh.execute(scriptPubKey, scriptSig, i);
+        //   break;
           case "v0_p2wpkh":
           scriptPubKey = input.prevout.scriptpubkey_asm;
           publicKeyHash = scriptPubKey.split(" ")[2];

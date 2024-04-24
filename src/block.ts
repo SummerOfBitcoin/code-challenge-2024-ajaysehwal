@@ -17,7 +17,8 @@ export class Block {
   public hash:string=''
   protected bits: bigint;
   protected txCount: number;
-  protected totalfees:number
+  protected totalfees:number;
+  protected witnessMerkleRoot:string;
   constructor(
     previousHash:string,
     transaction: BlockTransaction[],
@@ -32,6 +33,8 @@ export class Block {
     this.transactions = transaction;
     this.totalfees=this.calculateblockFees(transaction);
     this.merkleRoot = this.getmerkleRoot(transaction);
+    this.witnessMerkleRoot=this.calculatewTxidRoot(transaction)
+    this.calculateBlockWeight()
   }
   get difficulty(): bigint {
     return ((this.bits & BigInt(0x00ffffff)) * BigInt(2) ** (BigInt(8) * ((this.bits >> BigInt(24)) - BigInt(3))));
@@ -69,37 +72,49 @@ export class Block {
   addTransaction(transaction: BlockTransaction): number {
     this.transactions.push(transaction);
     this.txCount = this.transactions.length;
-    this.updateMerkleRoot(this.transactions);
+    this.merkleRoot=this.getmerkleRoot(this.transactions)
     return this.txCount;
   }
-  private calculateWeight() {}
 
   addCoinbaseTransaction(tx: Transaction) {
     tx.vout[0].value += this.totalfees;
-    tx.vout[1].scriptpubkey = `6a24aa21a9ed${this.getwtxidCommitment().toString(
-      "hex"
-    )}`;
+    const startstring="6a24aa21a9ed"
+    const commitment = this.getwtxidCommitment();
+    const scriptPubKey = Buffer.from(startstring + commitment, 'hex');
+    tx.vout[1].scriptpubkey =scriptPubKey.toString('hex');
+    console.log("coinbase",tx.getTx());
     console.log("Coinbase", tx.getTxId());
     this.transactions.unshift(tx.getTx());
-    this.updateMerkleRoot(this.transactions);
+    this.merkleRoot=this.getmerkleRoot(this.transactions);
     this.txCount++;
     return {serializeCoinbase:tx.serializeWithWitness()}
   }
   private getwtxidCommitment() {
-    console.log(
-      doubleSHA256(Buffer.from(this.calculatewTxidRoot(this.transactions) + "0".repeat(64), "hex"))
-    );
-    return doubleSHA256(
-      Buffer.from(this.calculatewTxidRoot(this.transactions) + "0".repeat(64), "hex")
-    );
+    const wxidRoot=Buffer.from(this.witnessMerkleRoot,'hex').reverse();
+    console.log("Find--------",wxidRoot.toString('hex'))
+    const witnessNullVector = Buffer.alloc(32).reverse();
+     const commitment=doubleSHA256(Buffer.concat([wxidRoot,witnessNullVector]))
+     return commitment.toString('hex')
+
   }
-  private calculatewTxidRoot(transactions: BlockTransaction[]) {
+  private reverseByteOrder(hexString: string): string {
+    const hexBytes = Buffer.from(hexString, 'hex');
+    const reversedBytes = Buffer.from(hexBytes.reverse());
+    const reversedHexString = reversedBytes.toString('hex');
+    return reversedHexString;
+   }
+
+ private calculatewTxidRoot(transactions: BlockTransaction[]) {
     const wtxids = transactions.map((el) => el.wtxid);
     wtxids.unshift("0".repeat(64)); /// for coinbase
     return calualateMerkleRoot(wtxids);
   }
-  private updateMerkleRoot(transaction: BlockTransaction[]): void {
-    this.merkleRoot = this.getmerkleRoot(transaction);
+  private calculateBlockWeight(){
+    let txweight=0;
+    for(let tx of this.transactions){
+       txweight+=tx.weight;
+    }
+    console.log("-------------------weight of block",320+txweight)
   }
   private getmerkleRoot(transactions:BlockTransaction[]){
     if (transactions.length === 0) {

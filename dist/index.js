@@ -54,11 +54,19 @@ class MineBlock {
     get duration() {
         return this.ended - this.started;
     }
+    reverseBytes(hexString) {
+        var _a, _b;
+        if (hexString.length % 2 !== 0) {
+            throw new Error("Hexadecimal string length must be even.");
+        }
+        const reversedHexString = ((_b = (_a = hexString.match(/.{2}/g)) === null || _a === void 0 ? void 0 : _a.reverse()) === null || _b === void 0 ? void 0 : _b.join("")) || "";
+        return reversedHexString;
+    }
     start() {
         return __awaiter(this, void 0, void 0, function* () {
             const header = this.block.headerBuffer();
             this.block.hash = (0, utils_1.doubleSHA256)(header).toString("hex");
-            while (BigInt('0x' + this.block.hash) > this.block.difficulty &&
+            while (BigInt('0x' + this.reverseBytes(this.block.hash)) > this.block.difficulty &&
                 this.block.nonce < this.MAX_NONCE) {
                 this.block.nonce++;
                 header.writeUInt32LE(this.block.nonce, 80 - 4);
@@ -81,18 +89,20 @@ class Miner {
             const coinbase = (0, coinbase_1.coinbaseTX)();
             const validtransaction = this.getValidTransactions();
             const block = new block_1.Block("0".repeat(64), validtransaction, BigInt(0x1f00ffff));
-            console.log(block.headerBuffer().toString("hex"));
             const { serializeCoinbase } = block.addCoinbaseTransaction(coinbase);
             const mineBlock = new MineBlock(chain, block, "");
             console.log(`Start mining of ${block.transactions.length} transactions with of 12.5 BTC`);
             yield mineBlock.start();
             chain.addBlock(block);
             const txids = block.transactions.map((tx) => tx.txid);
+            const reversedTxids = txids.map((txid) => { var _a, _b; return ((_b = (_a = txid.match(/.{2}/g)) === null || _a === void 0 ? void 0 : _a.reverse()) === null || _b === void 0 ? void 0 : _b.join("")) || ""; });
+            const wtxids = block.transactions.map((tx) => tx.wtxid);
+            const reversedwTxids = wtxids.map((wtxid) => { var _a, _b; return ((_b = (_a = wtxid.match(/.{2}/g)) === null || _a === void 0 ? void 0 : _a.reverse()) === null || _b === void 0 ? void 0 : _b.join("")) || ""; });
             const output = `${block
                 .headerBuffer()
-                .toString("hex")}\n${serializeCoinbase}\n${txids.join("\n")}`;
+                .toString("hex")}\n${serializeCoinbase}\n${reversedTxids.join("\n")}`;
             fs.writeFileSync("output.txt", output);
-            // fs.writeFileSync('test.ts',`export const txids = ${JSON.stringify(txids)};`)
+            fs.writeFileSync('test.txt', reversedwTxids.join('\n'));
             console.log(chain);
         });
     }
