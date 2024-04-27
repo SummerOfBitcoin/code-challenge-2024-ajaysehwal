@@ -16,12 +16,17 @@ class MemoryPool {
         return this.transactions;
     }
     loadTransactions() {
-        fs_1.default.readdirSync(this.mempoolFolder).forEach((file) => {
-            const data = fs_1.default.readFileSync(`${this.mempoolFolder}/${file}`, "utf-8");
-            const transactionData = JSON.parse(data);
-            const transaction = new transaction_1.Transaction(transactionData);
-            this.transactions.push(transaction);
-        });
+        try {
+            fs_1.default.readdirSync(this.mempoolFolder).forEach((file) => {
+                const data = fs_1.default.readFileSync(`${this.mempoolFolder}/${file}`, "utf-8");
+                const transactionData = JSON.parse(data);
+                const transaction = new transaction_1.Transaction(transactionData);
+                this.transactions.push(transaction);
+            });
+        }
+        catch (err) {
+            throw err;
+        }
     }
 }
 exports.MemoryPool = MemoryPool;

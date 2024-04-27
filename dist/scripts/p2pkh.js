@@ -96,14 +96,6 @@ class P2PKH {
         }
         return true;
     }
-    HextoNumber(hexString) {
-        const byteValues = [];
-        for (let i = 0; i < hexString.length; i += 2) {
-            const byte = hexString.substr(i, 2);
-            byteValues.push(parseInt(byte, 16));
-        }
-        return byteValues[0];
-    }
     getmessageHash(transaction, inputindex, hashType = 0x01) {
         const txclone = transaction.clone();
         const hashTypeBuffer = new Uint8Array([hashType, 0, 0, 0]); //LE

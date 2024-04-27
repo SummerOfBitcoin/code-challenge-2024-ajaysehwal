@@ -12,9 +12,7 @@ class Blockchain {
         return this.chain.length;
     }
     addBlock(block) {
-        console.log("Successfully Start Block Mining...");
         this.chain.push(block);
-        console.log("new Block Successfully minied");
     }
 }
 exports.Blockchain = Blockchain;

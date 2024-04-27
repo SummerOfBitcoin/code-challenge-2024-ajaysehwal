@@ -112,14 +112,6 @@ export class P2PKH {
     }
     return true;
   }
-  private HextoNumber(hexString: string): number {
-    const byteValues = [];
-    for (let i = 0; i < hexString.length; i += 2) {
-      const byte = hexString.substr(i, 2);
-      byteValues.push(parseInt(byte, 16));
-    }
-    return byteValues[0];
-  }
   private getmessageHash(
     transaction: Transaction,
     inputindex: number,

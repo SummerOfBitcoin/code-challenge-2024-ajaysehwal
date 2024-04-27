@@ -1,18 +1,17 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.Block = exports.BLOCK_SUBSIDY = exports.EMPTY_SCRIPT = exports.BLOCK_VERSION = exports.BTC = void 0;
+exports.Block = exports.BLOCK_SUBSIDY = exports.EMPTY_SCRIPT = exports.BLOCK_VERSION = void 0;
 const buffer_1 = require("./buffer");
 const merkleRoot_1 = require("./merkleRoot");
 const transaction_1 = require("./transaction");
 const utils_1 = require("./utils");
-exports.BTC = 100000000; // Number of blocks before a coinbase transaction can be spent
-exports.BLOCK_VERSION = 4; // Current Bitcoin block version
+exports.BLOCK_VERSION = 4;
 exports.EMPTY_SCRIPT = new Uint8Array([0x00]);
-exports.BLOCK_SUBSIDY = 6.25; // Empty script
+exports.BLOCK_SUBSIDY = 6.25;
 class Block {
     constructor(previousHash, transaction, bits = BigInt(0x1f00fff)) {
-        this.transactions = []; // List of transactions included in the block
-        this.hash = '';
+        this.transactions = [];
+        this.hash = "";
         this.version = exports.BLOCK_VERSION;
         this.previousHash = previousHash;
         this.timestamp = Math.ceil(Date.now() / 1000);
@@ -26,7 +25,8 @@ class Block {
         this.calculateBlockWeight();
     }
     get difficulty() {
-        return ((this.bits & BigInt(0x00ffffff)) * BigInt(2) ** (BigInt(8) * ((this.bits >> BigInt(24)) - BigInt(3))));
+        return ((this.bits & BigInt(0x00ffffff)) *
+            BigInt(2) ** (BigInt(8) * ((this.bits >> BigInt(24)) - BigInt(3))));
     }
     calculateHash() {
         const headerHex = this.headerBuffer();
@@ -36,12 +36,12 @@ class Block {
         const buffer = Buffer.allocUnsafe(80);
         const writer = new buffer_1.BitcoinWriter(buffer);
         writer.writeUint32(this.version);
-        writer.writeBuffer(Buffer.from(this.previousHash, 'hex').reverse());
+        writer.writeBuffer(Buffer.from(this.previousHash, "hex").reverse());
         writer.writeBuffer(Buffer.from(this.merkleRoot, "hex").reverse());
         writer.writeUint32(this.timestamp);
         writer.writeUint32(Number(this.bits));
         writer.writeUint32(this.nonce);
-        console.log(buffer.toString('hex'));
+        console.log(buffer.toString("hex"));
         return buffer;
     }
     createTransaction(tx) {
@@ -54,7 +54,6 @@ class Block {
         for (const tx of transaction) {
             totalFee += tx.fee;
         }
-        console.log("TotalFee", totalFee);
         return totalFee;
     }
     addTransaction(transaction) {
@@ -67,26 +66,23 @@ class Block {
         tx.vout[0].value += this.totalfees;
         const startstring = "6a24aa21a9ed";
         const commitment = this.getwtxidCommitment();
-        const scriptPubKey = Buffer.from(startstring + commitment, 'hex');
-        tx.vout[1].scriptpubkey = scriptPubKey.toString('hex');
-        console.log("coinbase", tx.getTx());
-        console.log("Coinbase", tx.getTxId());
+        const scriptPubKey = Buffer.from(startstring + commitment, "hex");
+        tx.vout[1].scriptpubkey = scriptPubKey.toString("hex");
         this.transactions.unshift(tx.getTx());
         this.merkleRoot = this.getmerkleRoot(this.transactions);
         this.txCount++;
         return { serializeCoinbase: tx.serializeWithWitness() };
     }
     getwtxidCommitment() {
-        const wxidRoot = Buffer.from(this.witnessMerkleRoot, 'hex').reverse();
-        console.log("Find--------", wxidRoot.toString('hex'));
+        const wxidRoot = Buffer.from(this.witnessMerkleRoot, "hex").reverse();
         const witnessNullVector = Buffer.alloc(32).reverse();
         const commitment = (0, utils_1.doubleSHA256)(Buffer.concat([wxidRoot, witnessNullVector]));
-        return commitment.toString('hex');
+        return commitment.toString("hex");
     }
     reverseByteOrder(hexString) {
-        const hexBytes = Buffer.from(hexString, 'hex');
+        const hexBytes = Buffer.from(hexString, "hex");
         const reversedBytes = Buffer.from(hexBytes.reverse());
-        const reversedHexString = reversedBytes.toString('hex');
+        const reversedHexString = reversedBytes.toString("hex");
         return reversedHexString;
     }
     calculatewTxidRoot(transactions) {
@@ -99,7 +95,6 @@ class Block {
         for (let tx of this.transactions) {
             txweight += tx.weight;
         }
-        console.log("-------------------weight of block", 320 + txweight);
     }
     getmerkleRoot(transactions) {
         if (transactions.length === 0) {
@@ -107,13 +102,6 @@ class Block {
         }
         const txids = transactions.map((el) => el.txid);
         return (0, merkleRoot_1.calualateMerkleRoot)(txids);
-    }
-    getTarget() {
-        const bits = parseInt('0x' + this.bits, 16);
-        const exponent = bits >> 24;
-        const mantissa = bits & 0xFFFFFF;
-        const target = (mantissa * (2 ** (8 * (exponent - 3)))).toString(16);
-        return Buffer.from('0'.repeat(64 - target.length) + target, 'hex');
     }
 }
 exports.Block = Block;
