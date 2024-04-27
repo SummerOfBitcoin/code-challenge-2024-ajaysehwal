@@ -6,7 +6,7 @@ import { Block } from "./block";
 import { MemoryPool } from "./memorypool";
 import { Validator } from "./validate";
 import { coinbaseTX } from "./coinbase";
-import { bufferToBigInt, doubleSHA256 } from "./utils";
+import { doubleSHA256 } from "./utils";
 export const BLOCK_SUBSIDY = 1250000000;
 export class MineBlock {
   started: number = Date.now();
@@ -16,7 +16,6 @@ export class MineBlock {
   constructor(
     protected chain: Blockchain,
     protected block: Block,
-    protected difficulty: string
   ) {}
 
   get duration(): number {
@@ -40,7 +39,6 @@ export class MineBlock {
       header.writeUInt32LE(this.block.nonce, 80 - 4);
       this.block.hash = doubleSHA256(header).toString("hex")
       this.hashes++;
-      // console.log(this.block.nonce, this.block.hash);
     }
     console.log("Block mined", this.block.hash, `in ${this.hashes} iterations`);
   }
@@ -59,27 +57,17 @@ export class Miner {
       BigInt(0x1f00ffff)
     );
     const { serializeCoinbase } = block.addCoinbaseTransaction(coinbase);
-    const mineBlock = new MineBlock(chain, block, "");
-    console.log(
-      `Start mining of ${block.transactions.length} transactions with of 12.5 BTC`
-    );
-
+    const mineBlock = new MineBlock(chain, block);
     await mineBlock.start();
     chain.addBlock(block);
     const txids = block.transactions.map((tx) => tx.txid);
       const reversedTxids = txids.map((txid) =>
       txid.match(/.{2}/g)?.reverse()?.join("") || ""
     );
-    const wtxids=block.transactions.map((tx) => tx.wtxid);
-    const reversedwTxids = wtxids.map((wtxid) =>
-    wtxid.match(/.{2}/g)?.reverse()?.join("") || ""
-  );
     const output = `${block
       .headerBuffer()
       .toString("hex")}\n${serializeCoinbase}\n${reversedTxids.join("\n")}`;
     fs.writeFileSync("output.txt", output);
-    fs.writeFileSync('test.txt',reversedwTxids.join('\n'))
-    console.log(chain);
   }
 
   private getValidTransactions(): BlockTransaction[] {
@@ -87,7 +75,6 @@ export class Miner {
     this.memoryPool.getTransactions().forEach((tx: Transaction) => {
       transactionsToValidate.push(tx);
     });
-    console.log("start validating transactions.../../");
     const validator = new Validator();
     this.validTransactions = validator.validateBatch(transactionsToValidate);
     return this.validTransactions;

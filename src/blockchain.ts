@@ -8,8 +8,6 @@ export class Blockchain {
     return this.chain.length;
   }
   public addBlock(block: Block) {
-    console.log("Successfully Start Block Mining...");
     this.chain.push(block);
-    console.log("new Block Successfully minied");
   }
 }

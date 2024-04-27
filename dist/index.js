@@ -42,10 +42,9 @@ const coinbase_1 = require("./coinbase");
 const utils_1 = require("./utils");
 exports.BLOCK_SUBSIDY = 1250000000;
 class MineBlock {
-    constructor(chain, block, difficulty) {
+    constructor(chain, block) {
         this.chain = chain;
         this.block = block;
-        this.difficulty = difficulty;
         this.started = Date.now();
         this.ended = Date.now();
         this.hashes = 0;
@@ -72,7 +71,6 @@ class MineBlock {
                 header.writeUInt32LE(this.block.nonce, 80 - 4);
                 this.block.hash = (0, utils_1.doubleSHA256)(header).toString("hex");
                 this.hashes++;
-                // console.log(this.block.nonce, this.block.hash);
             }
             console.log("Block mined", this.block.hash, `in ${this.hashes} iterations`);
         });
@@ -90,20 +88,15 @@ class Miner {
             const validtransaction = this.getValidTransactions();
             const block = new block_1.Block("0".repeat(64), validtransaction, BigInt(0x1f00ffff));
             const { serializeCoinbase } = block.addCoinbaseTransaction(coinbase);
-            const mineBlock = new MineBlock(chain, block, "");
-            console.log(`Start mining of ${block.transactions.length} transactions with of 12.5 BTC`);
+            const mineBlock = new MineBlock(chain, block);
             yield mineBlock.start();
             chain.addBlock(block);
             const txids = block.transactions.map((tx) => tx.txid);
             const reversedTxids = txids.map((txid) => { var _a, _b; return ((_b = (_a = txid.match(/.{2}/g)) === null || _a === void 0 ? void 0 : _a.reverse()) === null || _b === void 0 ? void 0 : _b.join("")) || ""; });
-            const wtxids = block.transactions.map((tx) => tx.wtxid);
-            const reversedwTxids = wtxids.map((wtxid) => { var _a, _b; return ((_b = (_a = wtxid.match(/.{2}/g)) === null || _a === void 0 ? void 0 : _a.reverse()) === null || _b === void 0 ? void 0 : _b.join("")) || ""; });
             const output = `${block
                 .headerBuffer()
                 .toString("hex")}\n${serializeCoinbase}\n${reversedTxids.join("\n")}`;
             fs.writeFileSync("output.txt", output);
-            fs.writeFileSync('test.txt', reversedwTxids.join('\n'));
-            console.log(chain);
         });
     }
     getValidTransactions() {
@@ -111,7 +104,6 @@ class Miner {
         this.memoryPool.getTransactions().forEach((tx) => {
             transactionsToValidate.push(tx);
         });
-        console.log("start validating transactions.../../");
         const validator = new validate_1.Validator();
         this.validTransactions = validator.validateBatch(transactionsToValidate);
         return this.validTransactions;
